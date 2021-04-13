@@ -1,0 +1,201 @@
+---
+title: "LBB_P4DS"
+author: "Amalia Purieka"
+date: "4/12/2021"
+output: 
+ html_document:
+   df_print: paged
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+AMPM is a Marketplace that loves to give out amazing deals. They have various discounts on every category, and They want their customer to get a fantastic bargain and expect an increasing Quantity of sales. AMPM works to satisfy its users. They want to make fast-moving products so that AMPM users will have more quantity sold and still profitable. This will be a win-win situation for both.
+
+## Discount strategies
+
+Plan before you offer discounts
+Understand how discounting affects profit margins and sales targets
+Consider the discount
+Benefit discount to profit
+
+## Import Library
+
+```{r}
+library(dplyr)
+```
+
+
+## Load Data
+
+```{r}
+retail <- read.csv("data_input/retail.csv")
+```
+
+read data retail and put to retail table
+
+## Data Inspection
+
+```{r}
+str(retail)
+```
+check retail table structure
+
+From our inspection we can conclude :
+
+Retail data contain 9994 of rows and 15 of coloumns
+Each of column name :
+Row.ID
+Order.ID
+Order.Date
+Ship.Date
+Customer.ID
+Segment
+Product.ID
+Category
+Sub.Category
+Product.Name
+Sales
+Quantity
+Discount
+Profit
+
+## Data Cleansing AND Coertions
+
+```{r}
+retail$Row.ID <- as.character(retail$Row.ID)
+retail$Order.ID<- as.character(retail$Order.ID)
+retail$Order.Date<- as.Date(retail$Order.Date, "%m/%d/%y")
+retail$Ship.Date <- as.Date(retail$Ship.Date, "%m/%d/%y")
+retail$Customer.ID<-as.character(retail$Customer.ID)
+retail$Product.ID<- as.character(retail$Product.ID)
+retail$Product.Name<-as.character(retail$Product.Name)
+```
+
+change some data type in retail table
+
+```{r}
+str(retail)
+```
+
+check new structure in retail table
+
+Check Missing Value
+
+```{r}
+colSums(is.na(retail))
+```
+
+no missing value in retail table
+
+```{r}
+retail <- retail %>% 
+  select(-Row.ID, -Order.ID)
+```
+
+we erase two column, Row.ID and Order.ID because we dont use it.
+
+## Data Explanatory
+
+```{r}
+retail <- retail %>% 
+  mutate(PL = ifelse(Profit>= 0, "PROFIT","LOSS"))
+table(retail$PL)
+```
+
+total sku that loss in profit 1871
+total sku that get profit 8123
+
+```{r}
+retail.profit <- retail %>% 
+  filter(PL == "PROFIT") %>%
+  summarize(sum_profit = sum(Profit))
+
+retail.loss <-  retail %>% 
+  filter(PL == "LOSS") %>%
+  summarize(sum_loss = sum(Profit))
+  
+x = retail.profit$sum_profit + retail.loss$sum_loss
+x
+```
+
+so from this data we get Profit 286.397 if we combine sku with loss and profit
+
+## Data Manipulation
+
+```{r}
+retail <- retail %>% 
+  mutate(pos_profit = ifelse(Profit< 0, "negative","positive"))
+```
+
+to mutate new column fill it with negative profit or positive profit refer to profit or loss
+
+```{r}
+retail_profit <- retail %>% 
+  select(Sales, Profit,pos_profit, Segment,Category, Sub.Category,Discount) %>% 
+  filter(Discount > 0) %>% 
+  filter(pos_profit == "positive") %>% 
+  mutate(COGS = Sales - Profit, a = 1- Discount, mftdisc = Profit / Sales,sales_bfr = Sales/a) %>% 
+  mutate(sales_bfr = formatC(sales_bfr, digits = 4, format = "f"))
+
+head(retail_profit)
+```
+
+this chunk find a profit sku after discount company gift and adding some column adding some column to gain some information:
+cogs = cost of good sold
+mftdisc = margin after discount
+sales_bfr = sales before discount
+
+```{r}
+retail_loss <- retail %>% 
+  select(Sales, Profit,pos_profit, Segment,Category, Sub.Category,Discount) %>% 
+  filter(Discount > 0) %>% 
+  filter(pos_profit == "negative") %>% 
+  mutate(hpp = Sales - Profit, a = 1- Discount, mftdisc = Profit / Sales,sales_bfr = Sales/a) %>% 
+  mutate(sales_bfr = formatC(sales_bfr, digits = 4, format = "f"))
+
+head(retail_loss)
+```
+
+this chunk find a loss in profit sku after discount company gift and adding some column
+adding some column to gain some information:
+
+cogs = cost of good sold
+mftdisc = margin after discount
+sales_bfr = sales before discount
+
+```{r}
+max_profit <- max(retail_profit$Profit)
+retail_profit1 <- retail_profit %>% 
+  select(Sales, Profit,pos_profit, Segment,Category,mftdisc, Sub.Category,Discount) %>% 
+  filter(Profit == max_profit)
+
+retail_profit1
+```
+Technolgy/copiers has a maximum profit with discount 0.2
+
+```{r}
+max_loss <- min(retail_loss$Profit)
+retail_loss1 <- retail_loss %>% 
+  select(Sales, Profit,pos_profit, Segment,Category,mftdisc, Sub.Category,Discount) %>% 
+  filter(Profit == max_loss)
+
+retail_loss1
+```
+
+Technology/Machine has minimum profit with discount 0.7
+
+## Business Recommendation
+
+some information we have after AMPM:
+
+- so from this data, we get Profit 286.397 despite the fact that some SKU got a loss
+- find Cost of good sold
+- find margin after Discount
+- find loss or profit
+- find category with profit or loss SKU
+
+The Discount must be less than the initial margin if you want to keep making a profit, by adding Cost of good sold information obtained from Sales - Profit, find out the initial margin by adding this margin in the data frame that can be used as a benchmark in this company to place a discount in the upcoming discount program. From this data, it can be seen that there is a negative profit because the Discount is greater than the initial margin.
